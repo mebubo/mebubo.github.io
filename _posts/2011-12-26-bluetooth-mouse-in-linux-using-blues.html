@@ -1,0 +1,114 @@
+---
+layout: post
+title: Bluetooth mouse in linux using blues-tools
+---
+
+<p>
+Configuring a bluetooth mouse is easy with the excellent <a href="http://code.google.com/p/bluez-tools/">bluez-tools</a>
+package.
+</p>
+<p>
+First we need to discover the MAC address of the mouse. To do this,
+press the button on the mouse labeled "connect" or something similar,
+then issue the following command:
+</p>
+
+
+
+<pre class="example">$ bt-adapter -d
+</pre>
+
+
+<p>
+You should see the output similar to the following:
+</p>
+
+
+
+<pre class="example">Searching...
+
+[00:01:02:03:04:05]
+  Name: Bluetooth Laser Travel Mouse
+  Alias: mouse
+  Address: 00:01:02:03:04:05
+...
+</pre>
+
+
+<p>
+Next we'll connect to the mouse (replace <code>00:01:02:03:04:05</code> with the
+MAC adress you saw in the output of the previous command):
+</p>
+
+
+
+<pre class="example">$ bt-device -c 00:01:02:03:04:05
+Connecting to: 00:01:02:03:04:05
+Agent registered
+Device: Bluetooth Laser Travel Mouse (00:01:02:03:04:05)
+Enter PIN code: 0000
+Agent released
+Done
+</pre>
+
+
+<p>
+You'll be asked to enter the PIN code; "0000" worked in my case.
+</p>
+<p>
+Now we can see our mouse in the list of known devices:
+</p>
+
+
+
+<pre class="example">$ bt-device -l
+Added devices:
+Bluetooth Laser Travel Mouse (00:01:02:03:04:05)
+</pre>
+
+
+<p>
+Let's give it a shorter alias:
+</p>
+
+
+
+<pre class="example">$ bt-device --set 00:01:02:03:04:05 Alias mouse
+Alias: Bluetooth Laser Travel Mouse -&gt; mouse
+</pre>
+
+
+<p>
+From now on, we can use the alias instead of the MAC address in the
+command line.
+</p>
+<p>
+In my experience, setting the <code>Trusted</code> property is necessary for
+mouse to be able to reconnect automatically:
+</p>
+
+
+
+<pre class="example">$ bt-device --set mouse Trusted true
+Trusted: 0 -&gt; 1
+</pre>
+
+
+
+<p>
+The only thing that remains is to connect the input service. The
+<code>bt-input</code> command does just that:
+</p>
+
+
+
+<pre class="example">$ bt-input -c mouse
+Input service is connected
+</pre>
+
+
+<p>
+That's it! After this, the mouse works all the time, including after
+reboot or sleep. All you need to do is move your mouse, and it
+reconnects within a second.
+</p>

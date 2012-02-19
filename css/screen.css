@@ -1,0 +1,28 @@
+#content {
+    width: 800px;
+    margin: 0 auto;
+}
+
+ul {
+    list-style-type: none;
+}
+
+a#home {
+    text-decoration: none;
+    color: #000;
+}
+
+pre {
+    border: 1px solid grey;
+    padding: 5px;
+    white-space: pre-wrap;
+
+}
+
+html {
+    //font-family: sans-serif;
+}
+
+time {
+    float: right;
+}

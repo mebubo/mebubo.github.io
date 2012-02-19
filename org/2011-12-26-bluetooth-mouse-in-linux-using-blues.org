@@ -1,0 +1,84 @@
+#+begin_html
+---
+layout: post
+title: Bluetooth mouse in linux using blues-tools
+---
+#+end_html
+
+Configuring a bluetooth mouse is easy with the excellent [[http://code.google.com/p/bluez-tools/][bluez-tools]]
+package.
+
+First we need to discover the MAC address of the mouse. To do this,
+press the button on the mouse labeled "connect" or something similar,
+then issue the following command:
+
+#+BEGIN_EXAMPLE
+$ bt-adapter -d
+#+END_EXAMPLE
+
+You should see the output similar to the following:
+
+#+BEGIN_EXAMPLE
+Searching...
+
+[00:01:02:03:04:05]
+  Name: Bluetooth Laser Travel Mouse
+  Alias: mouse
+  Address: 00:01:02:03:04:05
+...
+#+END_EXAMPLE
+
+Next we'll connect to the mouse (replace =00:01:02:03:04:05= with the
+MAC adress you saw in the output of the previous command):
+
+#+BEGIN_EXAMPLE
+$ bt-device -c 00:01:02:03:04:05
+Connecting to: 00:01:02:03:04:05
+Agent registered
+Device: Bluetooth Laser Travel Mouse (00:01:02:03:04:05)
+Enter PIN code: 0000
+Agent released
+Done
+#+END_EXAMPLE
+
+You'll be asked to enter the PIN code; "0000" worked in my case.
+
+Now we can see our mouse in the list of known devices:
+
+#+BEGIN_EXAMPLE
+$ bt-device -l
+Added devices:
+Bluetooth Laser Travel Mouse (00:01:02:03:04:05)
+#+END_EXAMPLE
+
+Let's give it a shorter alias:
+
+#+BEGIN_EXAMPLE
+$ bt-device --set 00:01:02:03:04:05 Alias mouse
+Alias: Bluetooth Laser Travel Mouse -> mouse
+#+END_EXAMPLE
+
+From now on, we can use the alias instead of the MAC address in the
+command line.
+
+In my experience, setting the =Trusted= property is necessary for
+mouse to be able to reconnect automatically:
+
+#+BEGIN_EXAMPLE
+$ bt-device --set mouse Trusted true
+Trusted: 0 -> 1
+#+END_EXAMPLE
+
+
+The only thing that remains is to connect the input service. The
+=bt-input= command does just that:
+
+#+BEGIN_EXAMPLE
+$ bt-input -c mouse
+Input service is connected
+#+END_EXAMPLE
+
+That's it! After this, the mouse works all the time, including after
+reboot or sleep. All you need to do is move your mouse, and it
+reconnects within a second.
+

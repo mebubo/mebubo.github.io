@@ -1,0 +1,133 @@
+#+begin_html
+---
+layout: post
+title: Using Huawei E1550 3G modem in Debian
+---
+#+end_html
+
+I use this nice little 3G modem from time to time whenever I'm away
+from home and work. Here's how it works in Debian.
+
+** ZeroCD, modeswitch
+First of all, this modem uses the so called ZeroCD mode to facilitate
+driver installation in Windows. When plugged in, it acts as a USB
+CDROM, from which the mobile provider-branded Windows software can be
+installed. The Windows software then performs some special action to
+put the modem into the actual "modem mode" (in which it even has
+different USD IDs).
+
+This ZeroCD feature is of course completely unnecessary and even
+annoying in linux.
+
+When first plugged in, the modem shows up like this:
+
+#+BEGIN_EXAMPLE
+$ lsusb
+Bus 003 Device 004: ID 12d1:1446 Huawei Technologies Co., Ltd. E1552 (HSPA modem)
+#+END_EXAMPLE
+
+To switch the mode, I used the modem-modeswitch binary that used to be
+included in the udev package:
+
+#+BEGIN_EXAMPLE
+$ sudo ./modem-modeswitch --vendor 0x12d1 --product 0x1446 --type option-zerocd
+#+END_EXAMPLE
+
+After that, lsusb output changes to
+
+#+BEGIN_EXAMPLE
+$ lsusb
+Bus 003 Device 005: ID 12d1:1001 Huawei Technologies Co., Ltd. E620 USB Modem
+#+END_EXAMPLE
+
+and the =/dev/ttyUSB0= device file is created by udev. This file is used
+to communicate with the modem.
+
+Apparently, instead of the deprecated modem-modeswitch from udev, the
+usb-modeswitch Debian package can be installed in order to
+automatically switch the device into the modem mode every time it is
+plugged in, but I never used it. I opted for disabling ZeroCD
+altogether.
+
+** Disabling ZeroCD
+
+Since I didn't plan to use this modem in Windows, I wanted to disable
+the ZeroCD feature completely. It is possible to change the default
+state of the device using the following AT commands (found [[http://www.dlink.ua/?e1550][here]]):
+
+#+BEGIN_EXAMPLE
+AT^U2DIAG=0   -- modem
+AT^U2DIAG=1   -- modem + CD-ROM
+AT^U2DIAG=255 -- modem + CD-ROM + Card Reader
+AT^U2DIAG=256 -- modem + Card Reader
+#+END_EXAMPLE
+
+AT commands can be entered interactively using your favorite serial
+communication program, for instance picocom:
+
+#+BEGIN_EXAMPLE
+$ picocom /dev/ttyUSB0
+#+END_EXAMPLE
+
+I chose the value 256 to be able to use both the modem and the
+built-in microSD card reader. Once the command is entered, no mode
+switching is necessary any more.
+
+** Entering PIN
+
+I prefer to leave my SIM-card PIN-locked. I use the following udev
+rule to run the script that automatically unlocks the card every time
+I plug the modem in:
+
+#+BEGIN_EXAMPLE
+$ cat /etc/udev/rules.d/45-huawei1550.rules
+SUBSYSTEM=="usb", ACTION=="add", ATTR{idProduct}=="1001", ATTR{idVendor}=="12d1", RUN+="/usr/local/sbin/modem-pin.sh
+#+END_EXAMPLE
+
+Here is the content of the =/usr/local/sbin/modem-pin.sh= script:
+#+BEGIN_HTML
+{% highlight sh %}
+#!/bin/sh
+
+RETRIES=10
+PORT=/dev/ttyUSB0
+
+PIN=1234
+
+# wait for $PORT to appear
+for i in `seq $RETRIES`
+do
+    if [ -e $PORT ]
+    then
+        # enter the PIN
+        echo -e "AT+CPIN=${PIN}\r" > $PORT
+        break
+    fi
+    sleep 1
+# backgrounding is necessary for udev to proceed with creating the
+# device file
+done &
+{% endhighlight %}
+#+END_HTML
+
+Once the modem is plugged in and the SIM card is unlocked, we're ready
+to connect.
+
+** pppd one-liner
+
+The connection can be established with a single command, no need to
+edit any config files. Change APN name ("internet") and phone number
+("*99#") to the ones appropriate for your provider:
+
+#+BEGIN_EXAMPLE
+$ /usr/sbin/pppd connect "/usr/sbin/chat -v ECHO ON '' AT+CGDCONT=1,\\\"IP\\\",\\\"internet\\\" OK ATDT*99# CONNECT" /dev/ttyUSB0 nodetach usepeerdns defaultroute noipdefault noauth
+#+END_EXAMPLE
+
+I found this one-liner to be great for debugging.
+
+** Permanent pppd and chat configuration
+
+The last step is to put pppd and chat configuration into static
+files. It is pretty straightforward and I'll leave it as an excercise
+for the reader :).
+
