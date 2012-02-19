@@ -5,8 +5,8 @@ layout: nil
 <feed xmlns="http://www.w3.org/2005/Atom">
  
   <title>mebubo</title>
-  <link href="http://coyled.com/"/>
-  <link type="application/atom+xml" rel="self" href="http://coyled.com/atom.xml"/>
+  <link href="http://mebubo.github.com/"/>
+  <link type="application/atom+xml" rel="self" href="http://mebubo.github.com/feed/atom.xml"/>
   <updated>{{ site.time | date_to_xmlschema }}</updated>
   <id>http://mebubo.github.com/</id>
   <author>
