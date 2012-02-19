@@ -3,7 +3,7 @@ layout: default
 title: mebubo
 ---
 {% for post in site.posts %}
-<article class="post">
+<article class="post{% if forloop.last == false %} notlast{% endif %}">
   <time> {{ post.date | date_to_string }} </time>
   <header>
     <h2><a href="{{ post.url }}"> {{ post.title }}</a></h2>

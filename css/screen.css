@@ -26,3 +26,7 @@ html {
 time {
     float: right;
 }
+
+article.notlast {
+    padding-bottom: 50px;
+}
