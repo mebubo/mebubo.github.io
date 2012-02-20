@@ -1,6 +1,22 @@
 #content {
     width: 800px;
     margin: 0 auto;
+    padding: 20px;
+    background: #FFF;
+    border: 1px solid #AAA;
+    border-width: 0 1px;
+}
+
+body {
+    margin: 0;
+}
+
+h1 a {
+    font-size: 100px;
+}
+
+h1 {
+    margin: 0px;
 }
 
 ul {
@@ -20,6 +36,7 @@ pre {
 }
 
 html {
+    background: #C4C4C4;
     //font-family: sans-serif;
 }
 
