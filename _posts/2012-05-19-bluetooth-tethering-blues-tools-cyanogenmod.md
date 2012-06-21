@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Bluetooth tethering with blues-utils and Cyanogenmod
+title: Bluetooth tethering with blues-tools and Cyanogenmod
 ---
 
 I have to admit that I kind of like Bluetooth technology. It
