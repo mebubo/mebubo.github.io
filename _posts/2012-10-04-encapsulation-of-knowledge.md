@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Encapsulation of knowledge
+title: Config files. Encapsulation of knowledge.
 ---
 
 I am a control freak. I like control. I like automation. That's why I
