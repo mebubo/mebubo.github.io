@@ -81,7 +81,7 @@ I plug the modem in:
 
 #+BEGIN_EXAMPLE
 $ cat /etc/udev/rules.d/45-huawei1550.rules
-SUBSYSTEM=="usb", ACTION=="add", ATTR{idProduct}=="1001", ATTR{idVendor}=="12d1", RUN+="/usr/local/sbin/modem-pin.sh
+SUBSYSTEM=="usb", ACTION=="add", ATTR{idProduct}=="1001", ATTR{idVendor}=="12d1", RUN+="/usr/local/sbin/modem-pin.sh"
 #+END_EXAMPLE
 
 Here is the content of the =/usr/local/sbin/modem-pin.sh= script:
