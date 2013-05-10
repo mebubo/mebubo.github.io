@@ -93,3 +93,22 @@ connection is established:
 
 ![](/images/bt-tether-1.png)
 ![](/images/bt-tether-2.png)
+
+**Update 11 May 2013**
+
+I recently realized that, at least on a Debian system, the shell
+script above is not really necessary.
+
+Instead, add the following 2 lines to the `/etc/network/interfaces`
+file:
+
+    allow-hotplug bnep0
+    iface bnep0 inet dhcp
+
+To start the tethering, simply use the `bt-network` command directly:
+
+    bt-network -c <alias> nap
+
+As soon as the bluetooth network interface `bnep0` appears, it will be
+auto-configured with dhcp thanks to the entry in the
+`/etc/network/interfaces` file.
