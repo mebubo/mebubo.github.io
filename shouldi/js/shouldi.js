@@ -1,3 +1,5 @@
+var DAYS_TO_SKIP = 2;
+
 function setResult(date) {
     $("span#today").text(date.toDateString());
     $("span#result").text(shouldIString(date));
@@ -32,13 +34,13 @@ function shouldI(date) {
 }
 
 function calculateShouldI(date) {
-    for (var offset in [-1, -2]) {
+    for (var offset=-DAYS_TO_SKIP; offset < 0; offset++) {
         if (getStoredResult(date, offset) === 'true') {
             return false;
         }
     }
     var random = Math.random();
-    return (random < 1/4);
+    return (random < 1/(7 - DAYS_TO_SKIP));
 }
 
 function shouldIString(date) {
