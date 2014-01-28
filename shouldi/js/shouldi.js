@@ -47,8 +47,27 @@ function shouldIString(date) {
     return shouldI(date) ? "Yes, please!" : "No. Eat up!";
 }
 
+function setPrevious() {
+    var dates = getPrevious("true");
+    console.log(dates);
+    for (var i in dates) {
+        $("ul#previous").append('<li>' + dates[i].toDateString() + '</li>');
+    }
+}
+
+function getPrevious(fasting) {
+    var dates = [];
+    for (var dateString in localStorage) {
+        if (localStorage.getItem(dateString) == fasting) {
+            dates.push(new Date(dateString));
+        }
+    }
+    return dates.sort().reverse();
+}
+
 $(document).ready(
     function() {
         var date = new Date();
         setResult(date);
+        setPrevious();
     });
