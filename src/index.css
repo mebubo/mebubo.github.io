@@ -1,0 +1,169 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: #f5f5f5;
+  margin: 0;
+  padding: 1rem;
+}
+
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  display: grid;
+  gap: 2rem;
+}
+
+h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+section {
+  display: grid;
+  gap: 0.5rem;
+}
+
+label[for="formula"] {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.formula-input {
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+  font-size: 1rem;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 100%;
+  background: white;
+}
+
+.formula-input:focus {
+  outline: 2px solid #5b8fb9;
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+.parameters {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.parameter {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+}
+
+.parameter-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.parameter-name {
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.parameter-header select {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  background: white;
+  margin-left: auto;
+}
+
+.parameter-fields {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.field span {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.field input {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  width: 8rem;
+  min-height: 2.25rem;
+}
+
+.field input:focus,
+.parameter-header select:focus {
+  outline: 2px solid #5b8fb9;
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+.sample-count {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
+}
+
+.stat {
+  padding: 0.625rem 0.75rem;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-value {
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.histogram {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.error {
+  color: #c33;
+  font-size: 0.875rem;
+}
