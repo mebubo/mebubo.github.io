@@ -35,6 +35,12 @@ export function sample(dist: Distribution): number {
   }
 }
 
+export function sampleMany(dist: Distribution, n: number): number[] {
+  const result = [];
+  for (let i = 0; i < n; i++) result.push(sample(dist));
+  return result;
+}
+
 export function defaultDistribution(): Distribution {
   return { type: "uniform", min: 0, max: 100 };
 }

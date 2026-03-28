@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { parse, extractVariables } from "./formula";
-import { type Distribution, DISTRIBUTION_TYPES, defaultDistribution } from "./distributions";
+import { type Distribution, DISTRIBUTION_TYPES, defaultDistribution, sampleMany } from "./distributions";
 import { simulate, type SimulationResult } from "./simulate";
 
 function formatNum(n: number): string {
@@ -9,6 +9,107 @@ function formatNum(n: number): string {
   if (abs >= 1e6 || abs < 0.01) return n.toExponential(2);
   if (Number.isInteger(n) && abs < 1e6) return n.toLocaleString();
   return n.toPrecision(4);
+}
+
+function toLogSafe(v: number): number {
+  return Math.log10(Math.max(Math.abs(v), 1e-10));
+}
+
+function fromLog(logVal: number): number {
+  return parseFloat(Math.pow(10, logVal).toPrecision(3));
+}
+
+function DistributionPreview({ dist }: { dist: Distribution }) {
+  const distKey = JSON.stringify(dist);
+  const data = useMemo(() => {
+    const raw = sampleMany(dist, 3000).filter(isFinite).sort((a, b) => a - b);
+    if (raw.length < 10) return null;
+    const lo = raw[Math.floor(raw.length * 0.01)];
+    const hi = raw[Math.floor(raw.length * 0.99)];
+    const binCount = 40;
+    const width = (hi - lo) / binCount;
+    if (width <= 0) return null;
+    const bins = new Array(binCount).fill(0);
+    for (const s of raw) {
+      if (s >= lo && s <= hi) {
+        bins[Math.min(Math.floor((s - lo) / width), binCount - 1)]++;
+      }
+    }
+    return { bins, lo, hi };
+  }, [distKey]);
+
+  if (!data) return null;
+  const maxBin = Math.max(...data.bins);
+  const W = 200;
+  const H = 48;
+  const barW = W / data.bins.length;
+
+  return (
+    <svg className="dist-preview" viewBox={`0 0 ${W} ${H + 14}`}>
+      {data.bins.map((count, i) => {
+        const barH = maxBin > 0 ? (count / maxBin) * H : 0;
+        return (
+          <rect
+            key={i}
+            x={i * barW}
+            y={H - barH}
+            width={Math.max(barW - 0.3, 0.3)}
+            height={barH}
+            fill="#5b8fb9"
+            opacity={0.5}
+          />
+        );
+      })}
+      <text x={0} y={H + 12} fontSize={9} fill="#999">{formatNum(data.lo)}</text>
+      <text x={W} y={H + 12} fontSize={9} fill="#999" textAnchor="end">{formatNum(data.hi)}</text>
+    </svg>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  // Log-scale slider with fixed range computed once at mount
+  const [logRange] = useState(() => {
+    const log = toLogSafe(value);
+    const center = Math.round(log * 2) / 2;
+    return [center - 2.5, center + 2.5] as const;
+  });
+
+  const logValue = toLogSafe(value);
+  const clampedLog = Math.max(logRange[0], Math.min(logRange[1], logValue));
+
+  return (
+    <label className="field">
+      <div className="field-header">
+        <span>{label}</span>
+        <input
+          type="number"
+          step="any"
+          value={value}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            if (!isNaN(v)) onChange(v);
+          }}
+        />
+      </div>
+      <input
+        className="slider"
+        type="range"
+        min={logRange[0]}
+        max={logRange[1]}
+        step={0.01}
+        value={clampedLog}
+        onChange={(e) => onChange(fromLog(parseFloat(e.target.value)))}
+      />
+    </label>
+  );
 }
 
 function DistributionEditor({
@@ -39,55 +140,33 @@ function DistributionEditor({
           ))}
         </select>
       </div>
-      <div className="parameter-fields">
-        {dist.type === "uniform" && (
-          <>
-            <Field label="min" value={dist.min} onChange={(v) => onChange({ ...dist, min: v })} />
-            <Field label="max" value={dist.max} onChange={(v) => onChange({ ...dist, max: v })} />
-          </>
-        )}
-        {dist.type === "gaussian" && (
-          <>
-            <Field label="μ" value={dist.mean} onChange={(v) => onChange({ ...dist, mean: v })} />
-            <Field label="σ" value={dist.stddev} onChange={(v) => onChange({ ...dist, stddev: v })} />
-          </>
-        )}
-        {dist.type === "lognormal" && (
-          <>
-            <Field label="low (P10)" value={dist.low} onChange={(v) => onChange({ ...dist, low: v })} />
-            <Field label="high (P90)" value={dist.high} onChange={(v) => onChange({ ...dist, high: v })} />
-          </>
-        )}
-        {dist.type === "poisson" && (
-          <Field label="λ" value={dist.lambda} onChange={(v) => onChange({ ...dist, lambda: v })} />
-        )}
+      <div className="parameter-body">
+        <div className="parameter-fields">
+          {dist.type === "uniform" && (
+            <>
+              <Field label="min" value={dist.min} onChange={(v) => onChange({ ...dist, min: v })} />
+              <Field label="max" value={dist.max} onChange={(v) => onChange({ ...dist, max: v })} />
+            </>
+          )}
+          {dist.type === "gaussian" && (
+            <>
+              <Field label="μ" value={dist.mean} onChange={(v) => onChange({ ...dist, mean: v })} />
+              <Field label="σ" value={dist.stddev} onChange={(v) => onChange({ ...dist, stddev: v })} />
+            </>
+          )}
+          {dist.type === "lognormal" && (
+            <>
+              <Field label="low (P10)" value={dist.low} onChange={(v) => onChange({ ...dist, low: v })} />
+              <Field label="high (P90)" value={dist.high} onChange={(v) => onChange({ ...dist, high: v })} />
+            </>
+          )}
+          {dist.type === "poisson" && (
+            <Field label="λ" value={dist.lambda} onChange={(v) => onChange({ ...dist, lambda: v })} />
+          )}
+        </div>
+        <DistributionPreview dist={dist} />
       </div>
     </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      <input
-        type="number"
-        step="any"
-        value={value}
-        onChange={(e) => {
-          const v = parseFloat(e.target.value);
-          if (!isNaN(v)) onChange(v);
-        }}
-      />
-    </label>
   );
 }
 
