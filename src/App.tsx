@@ -55,8 +55,10 @@ function getGraphRange(dist: Distribution): [number, number] {
   }
 }
 
+const GW = 300, GH = 52, AH = 16;
+
 function DistributionGraph({ dist }: { dist: Distribution }) {
-  const W = 300, H = 56;
+  const W = GW, totalH = GH + AH;
 
   if (dist.type === "poisson") {
     const lambda = Math.max(dist.lambda, 0.001);
@@ -69,12 +71,20 @@ function DistributionGraph({ dist }: { dist: Distribution }) {
     }
     const maxP = Math.max(...bars, 1e-10);
     const barW = W / bars.length;
+    const lambdaX = Math.min((dist.lambda / kMax) * W, W - 1);
     return (
-      <svg className="dist-graph" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      <svg className="dist-graph" viewBox={`0 0 ${W} ${totalH}`} preserveAspectRatio="none">
         {bars.map((p, k) => {
-          const h = (p / maxP) * H;
-          return <rect key={k} x={k * barW + 0.5} y={H - h} width={Math.max(barW - 1, 0.5)} height={h} fill="#5b8fb9" opacity={0.7} />;
+          const h = (p / maxP) * GH;
+          return <rect key={k} x={k * barW + 0.5} y={GH - h} width={Math.max(barW - 1, 0.5)} height={h} fill="#5b8fb9" opacity={0.7} />;
         })}
+        <line x1={0} y1={GH} x2={W} y2={GH} stroke="#ddd" strokeWidth={0.5} />
+        <line x1={1} y1={GH} x2={1} y2={GH + 3} stroke="#aaa" strokeWidth={0.5} />
+        <line x1={lambdaX} y1={GH} x2={lambdaX} y2={GH + 3} stroke="#aaa" strokeWidth={0.5} />
+        <line x1={W - 1} y1={GH} x2={W - 1} y2={GH + 3} stroke="#aaa" strokeWidth={0.5} />
+        <text x={1} y={totalH - 2} fontSize={9} fill="#888" textAnchor="start">0</text>
+        <text x={lambdaX} y={totalH - 2} fontSize={9} fill="#888" textAnchor="middle">{formatNum(dist.lambda)}</text>
+        <text x={W - 1} y={totalH - 2} fontSize={9} fill="#888" textAnchor="end">{kMax}</text>
       </svg>
     );
   }
@@ -91,44 +101,80 @@ function DistributionGraph({ dist }: { dist: Distribution }) {
 
   const maxY = Math.max(...pts.map((p) => p[1]), 1e-10);
   const sx = (x: number) => ((x - xMin) / (xMax - xMin)) * W;
-  const sy = (y: number) => H - (y / maxY) * H * 0.95;
+  const sy = (y: number) => GH - (y / maxY) * GH * 0.95;
 
   const linePts = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${sx(x).toFixed(1)},${sy(y).toFixed(1)}`).join(" ");
-  const fillPath = `${linePts} L${sx(pts[pts.length - 1][0]).toFixed(1)},${H} L${sx(pts[0][0]).toFixed(1)},${H} Z`;
+  const fillPath = `${linePts} L${sx(pts[pts.length - 1][0]).toFixed(1)},${GH} L${sx(pts[0][0]).toFixed(1)},${GH} Z`;
+
+  type Tick = { x: number; label: string; anchor: "start" | "middle" | "end" };
+  let ticks: Tick[] = [];
+
+  if (dist.type === "uniform") {
+    ticks = [
+      { x: dist.min, label: formatNum(dist.min), anchor: "middle" },
+      { x: dist.max, label: formatNum(dist.max), anchor: "middle" },
+    ];
+  } else if (dist.type === "gaussian") {
+    const s = Math.abs(dist.stddev) || 1;
+    ticks = [
+      { x: xMin, label: formatNum(dist.mean - 3 * s), anchor: "start" },
+      { x: dist.mean, label: formatNum(dist.mean), anchor: "middle" },
+      { x: xMax, label: formatNum(dist.mean + 3 * s), anchor: "end" },
+    ];
+  } else {
+    // lognormal — mark P10 and P90
+    ticks = [
+      { x: dist.low,  label: formatNum(dist.low),  anchor: "middle" },
+      { x: dist.high, label: formatNum(dist.high), anchor: "middle" },
+    ];
+  }
 
   return (
-    <svg className="dist-graph" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+    <svg className="dist-graph" viewBox={`0 0 ${W} ${totalH}`} preserveAspectRatio="none">
       <path d={fillPath} fill="#5b8fb9" opacity={0.2} />
       <path d={linePts} fill="none" stroke="#5b8fb9" strokeWidth={1.5} />
+      <line x1={0} y1={GH} x2={W} y2={GH} stroke="#ddd" strokeWidth={0.5} />
+      {ticks.map((tick, i) => {
+        const tx = Math.max(1, Math.min(W - 1, sx(tick.x)));
+        return (
+          <g key={i}>
+            <line x1={tx} y1={GH} x2={tx} y2={GH + 3} stroke="#aaa" strokeWidth={0.5} />
+            <text x={tx} y={totalH - 2} fontSize={9} fill="#888" textAnchor={tick.anchor}>{tick.label}</text>
+          </g>
+        );
+      })}
     </svg>
   );
 }
 
-function getSliderBounds(dist: Distribution): Record<string, [number, number]> {
+type BoundEntry = { range: [number, number]; log?: boolean };
+
+function getSliderBounds(dist: Distribution): Record<string, BoundEntry> {
   switch (dist.type) {
     case "uniform": {
-      const span = Math.max(dist.max - dist.min, Math.abs(dist.max), Math.abs(dist.min), 1);
-      const lo = Math.min(dist.min, 0) - span * 0.5;
-      const hi = dist.max + span * 1.5;
-      return { min: [lo, hi], max: [lo, hi] };
+      const span = Math.max(dist.max - dist.min, 1);
+      return {
+        min: { range: [dist.min - span, dist.min + span * 2] },
+        max: { range: [dist.max - span * 2, dist.max + span] },
+      };
     }
     case "gaussian": {
-      const spread = Math.max(Math.abs(dist.stddev) * 5, Math.abs(dist.mean) * 0.5, 10);
+      const s = Math.max(Math.abs(dist.stddev), 1);
       return {
-        mean: [dist.mean - spread, dist.mean + spread],
-        stddev: [0, Math.max(Math.abs(dist.stddev) * 5, 1)],
+        mean:   { range: [dist.mean - s * 4, dist.mean + s * 4] },
+        stddev: { range: [s * 0.05, s * 4] },
       };
     }
     case "lognormal": {
-      const hi = Math.max(dist.high, 1);
-      const lo = Math.max(dist.low, 0.01);
+      const lo = Math.max(dist.low, 1e-3);
+      const hi = Math.max(dist.high, lo * 1.1);
       return {
-        low: [lo * 0.01, hi * 5],
-        high: [lo * 0.1, hi * 10],
+        low:  { range: [lo * 0.1,  hi * 3],  log: true },
+        high: { range: [lo * 0.3,  hi * 10], log: true },
       };
     }
     case "poisson":
-      return { lambda: [0, Math.max(dist.lambda * 5, 20)] };
+      return { lambda: { range: [0.1, Math.max(dist.lambda * 4, 20)], log: true } };
   }
 }
 
@@ -138,15 +184,21 @@ function Field({
   onChange,
   sliderMin = 0,
   sliderMax = 100,
+  logScale = false,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
   sliderMin?: number;
   sliderMax?: number;
+  logScale?: boolean;
 }) {
-  const step = (sliderMax - sliderMin) / 200;
-  const clamped = Math.min(Math.max(value, sliderMin), sliderMax);
+  const safeMin = logScale ? Math.log10(Math.max(sliderMin, 1e-10)) : sliderMin;
+  const safeMax = logScale ? Math.log10(Math.max(sliderMax, 1e-9)) : sliderMax;
+  const sliderVal = logScale
+    ? Math.log10(Math.max(value, 1e-10))
+    : Math.min(Math.max(value, sliderMin), sliderMax);
+  const step = (safeMax - safeMin) / 500;
 
   return (
     <div className="field">
@@ -154,11 +206,14 @@ function Field({
       <div className="field-controls">
         <input
           type="range"
-          min={sliderMin}
-          max={sliderMax}
+          min={safeMin}
+          max={safeMax}
           step={step}
-          value={clamped}
-          onChange={(e) => onChange(parseFloat(e.target.value))}
+          value={Math.min(Math.max(sliderVal, safeMin), safeMax)}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            onChange(logScale ? Math.pow(10, v) : v);
+          }}
           className="field-slider"
         />
         <input
@@ -210,24 +265,24 @@ function DistributionEditor({
       <div className="parameter-fields">
         {dist.type === "uniform" && (
           <>
-            <Field label="min" value={dist.min} onChange={(v) => onChange({ ...dist, min: v })} sliderMin={bounds.min[0]} sliderMax={bounds.min[1]} />
-            <Field label="max" value={dist.max} onChange={(v) => onChange({ ...dist, max: v })} sliderMin={bounds.max[0]} sliderMax={bounds.max[1]} />
+            <Field label="min" value={dist.min} onChange={(v) => onChange({ ...dist, min: v })} sliderMin={bounds.min.range[0]} sliderMax={bounds.min.range[1]} logScale={bounds.min.log} />
+            <Field label="max" value={dist.max} onChange={(v) => onChange({ ...dist, max: v })} sliderMin={bounds.max.range[0]} sliderMax={bounds.max.range[1]} logScale={bounds.max.log} />
           </>
         )}
         {dist.type === "gaussian" && (
           <>
-            <Field label="μ" value={dist.mean} onChange={(v) => onChange({ ...dist, mean: v })} sliderMin={bounds.mean[0]} sliderMax={bounds.mean[1]} />
-            <Field label="σ" value={dist.stddev} onChange={(v) => onChange({ ...dist, stddev: v })} sliderMin={bounds.stddev[0]} sliderMax={bounds.stddev[1]} />
+            <Field label="μ" value={dist.mean} onChange={(v) => onChange({ ...dist, mean: v })} sliderMin={bounds.mean.range[0]} sliderMax={bounds.mean.range[1]} logScale={bounds.mean.log} />
+            <Field label="σ" value={dist.stddev} onChange={(v) => onChange({ ...dist, stddev: v })} sliderMin={bounds.stddev.range[0]} sliderMax={bounds.stddev.range[1]} logScale={bounds.stddev.log} />
           </>
         )}
         {dist.type === "lognormal" && (
           <>
-            <Field label="low (P10)" value={dist.low} onChange={(v) => onChange({ ...dist, low: v })} sliderMin={bounds.low[0]} sliderMax={bounds.low[1]} />
-            <Field label="high (P90)" value={dist.high} onChange={(v) => onChange({ ...dist, high: v })} sliderMin={bounds.high[0]} sliderMax={bounds.high[1]} />
+            <Field label="low (P10)" value={dist.low} onChange={(v) => onChange({ ...dist, low: v })} sliderMin={bounds.low.range[0]} sliderMax={bounds.low.range[1]} logScale={bounds.low.log} />
+            <Field label="high (P90)" value={dist.high} onChange={(v) => onChange({ ...dist, high: v })} sliderMin={bounds.high.range[0]} sliderMax={bounds.high.range[1]} logScale={bounds.high.log} />
           </>
         )}
         {dist.type === "poisson" && (
-          <Field label="λ" value={dist.lambda} onChange={(v) => onChange({ ...dist, lambda: v })} sliderMin={bounds.lambda[0]} sliderMax={bounds.lambda[1]} />
+          <Field label="λ" value={dist.lambda} onChange={(v) => onChange({ ...dist, lambda: v })} sliderMin={bounds.lambda.range[0]} sliderMax={bounds.lambda.range[1]} logScale={bounds.lambda.log} />
         )}
       </div>
     </div>
